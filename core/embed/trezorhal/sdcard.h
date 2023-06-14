@@ -61,4 +61,7 @@ secbool __wur sdcard_read_blocks(uint32_t *dest, uint32_t block_num,
 secbool __wur sdcard_write_blocks(const uint32_t *src, uint32_t block_num,
                                   uint32_t num_blocks);
 
+
+void sdcard_assd_test(void);
+
 #endif

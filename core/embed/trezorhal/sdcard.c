@@ -52,6 +52,7 @@
 #include "sdcard-set_clr_card_detect.h"
 #include "sdcard.h"
 #include "supervise.h"
+#include "display.h"
 
 #define SDMMC_CLK_ENABLE() __HAL_RCC_SDMMC1_CLK_ENABLE()
 #define SDMMC_CLK_DISABLE() __HAL_RCC_SDMMC1_CLK_DISABLE()
@@ -186,6 +187,10 @@ secbool sdcard_power_on(void) {
 error:
   sdcard_power_off();
   return secfalse;
+}
+
+void sdcard_assd_test(void) {
+  display_printf("SD card test\n");
 }
 
 void sdcard_power_off(void) {

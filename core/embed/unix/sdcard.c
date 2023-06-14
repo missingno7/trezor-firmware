@@ -45,6 +45,10 @@ static void sdcard_exit(void) {
   sdcard_buffer = NULL;
 }
 
+void sdcard_assd_test(void) {
+  return;
+}
+
 void sdcard_init(void) {
   if (sdcard_buffer != NULL) {
     return;
