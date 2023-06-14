@@ -52,7 +52,6 @@
 #include "sdcard-set_clr_card_detect.h"
 #include "sdcard.h"
 #include "supervise.h"
-#include "display.h"
 
 #define SDMMC_CLK_ENABLE() __HAL_RCC_SDMMC1_CLK_ENABLE()
 #define SDMMC_CLK_DISABLE() __HAL_RCC_SDMMC1_CLK_DISABLE()
@@ -60,6 +59,11 @@
 #define SDMMC_DMA dma_SDIO_0
 
 static SD_HandleTypeDef sd_handle;
+
+SD_HandleTypeDef* get_sd_handle(void) {
+    return &sd_handle;
+}
+
 
 static inline void sdcard_default_pin_state(void) {
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);     // SD_ON/PC0
@@ -187,10 +191,6 @@ secbool sdcard_power_on(void) {
 error:
   sdcard_power_off();
   return secfalse;
-}
-
-void sdcard_assd_test(void) {
-  display_printf("SD card test\n");
 }
 
 void sdcard_power_off(void) {
