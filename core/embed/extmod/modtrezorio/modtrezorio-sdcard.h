@@ -74,6 +74,14 @@ STATIC mp_obj_t mod_trezorio_sdcard_capacity() {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_trezorio_sdcard_capacity_obj,
                                  mod_trezorio_sdcard_capacity);
 
+
+STATIC mp_obj_t mod_trezorio_sdcard_assd_test() {
+  sdcard_assd_test();
+  return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_trezorio_sdcard_assd_test_obj,
+                                 mod_trezorio_sdcard_assd_test);
+
 /// def read(block_num: int, buf: bytearray) -> None:
 ///     """
 ///     Reads blocks starting with block_num from the SD card into buf.

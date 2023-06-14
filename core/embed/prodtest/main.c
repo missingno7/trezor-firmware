@@ -422,6 +422,61 @@ power_off:
 }
 #endif
 
+
+#ifdef USE_SD_CARD
+
+
+static void test_assd(void) {
+#define BLOCK_SIZE_ASSD (32 * 64)
+  static uint32_t buf1[BLOCK_SIZE_ASSD / sizeof(uint32_t)];
+
+  if (sectrue != sdcard_is_present()) {
+    vcp_printf("ERROR NOCARD");
+    return;
+  }
+
+  ensure(sdcard_power_on(), NULL);
+
+
+
+  if (sectrue != sdcard_read_blocks(buf1, 0, BLOCK_SIZE_ASSD / SDCARD_BLOCK_SIZE)) {
+    vcp_printf("ERROR sdcard_read_blocks (0)");
+    goto power_off;
+  }
+
+  if (sectrue != sdcard_read_blocks(buf1, 0, BLOCK_SIZE_ASSD / SDCARD_BLOCK_SIZE)) {
+
+     goto power_off;
+ }
+
+ for (int i = 0; i < BLOCK_SIZE_ASSD / sizeof(uint32_t); i++) {
+    if (buf1[i] > 0)
+    {
+     vcp_printf("%d: %d, ",i, buf1[i]);
+    }
+ }
+
+
+  SD_HandleTypeDef* sd_handle = get_sd_handle();
+  HAL_SD_CardInfoTypeDef cardinfo;
+  HAL_SD_GetCardInfo(sd_handle, &cardinfo);
+
+  vcp_printf("CardType (%d)", cardinfo.CardType);
+  vcp_printf("Class (%d)", cardinfo.Class);
+  vcp_printf("RelCardAdd (%d)", cardinfo.RelCardAdd);
+  vcp_printf("BlockNbr (%d)", cardinfo.BlockNbr);
+  vcp_printf("BlockSize (%d)", cardinfo.BlockSize);
+  vcp_printf("LogBlockNbr (%d)", cardinfo.LogBlockNbr);
+  vcp_printf("LogBlockSize (%d)", cardinfo.LogBlockSize);
+
+
+ vcp_printf("OK");
+
+power_off:
+  sdcard_power_off();
+}
+#endif
+
 static void test_wipe(void) {
   // erase start of the firmware (metadata) -> invalidate FW
   ensure(flash_unlock_write(), NULL);
@@ -579,6 +634,11 @@ int main(void) {
 #ifdef USE_SD_CARD
     } else if (startswith(line, "SD")) {
       test_sd();
+
+      } else if (startswith(line, "ASSD")) {
+        test_assd();
+
+
 #endif
 #ifdef USE_SBU
     } else if (startswith(line, "SBU ")) {

@@ -1,5 +1,9 @@
 # isort:skip_file
 
+import trezorio
+
+trezorio.sdcard.assd_test()
+
 import trezorui2
 import utime
 

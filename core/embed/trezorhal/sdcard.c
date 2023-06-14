@@ -60,6 +60,11 @@
 
 static SD_HandleTypeDef sd_handle;
 
+SD_HandleTypeDef* get_sd_handle(void) {
+    return &sd_handle;
+}
+
+
 static inline void sdcard_default_pin_state(void) {
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);     // SD_ON/PC0
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);   // SD_DAT0/PC8
