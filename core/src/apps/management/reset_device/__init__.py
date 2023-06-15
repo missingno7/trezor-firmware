@@ -34,8 +34,9 @@ async def confirm_sd_backup(ctx: Context):
     return True
 
 
+
 async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
-    from trezor import config, sdcard
+    from trezor import config
     from apps.common.request_pin import request_pin_confirm
     from trezor.ui.layouts import (
         confirm_backup,
@@ -44,7 +45,7 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor.crypto import bip39, random
     from trezor.messages import Success, EntropyAck, EntropyRequest
     from trezor.pin import render_empty_loader
-    from storage.sd_seed_backup import load_sd_seed_backup
+    from apps.management.sd_backup import sd_card_backup_seed, is_sdbackup_present, verify_sd_backup_seed
 
     backup_type = msg.backup_type  # local_cache_attribute
 
@@ -100,18 +101,16 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     # If either of skip_backup or no_backup is specified, we are not doing backup now.
     # Otherwise, we try to do it.
     perform_backup = not msg.no_backup and not msg.skip_backup
-    is_sd_present = sdcard.is_present()
+    sd_backup_present = is_sdbackup_present()
 
-    if is_sd_present:
+    # Do the SD card backup
+    if sd_backup_present:
         perform_sd_backup = await confirm_sd_backup(ctx)
         if perform_sd_backup:
             await sd_card_backup_seed(ctx, secret)
 
-            # Ensure correct mnemonic can be loaded
-            restored_secret = load_sd_seed_backup()
-            if secret != restored_secret:
-                raise ProcessError("SD retrieved seed differs from stored seed")
-
+            # Verify that backup was successful
+            verify_sd_backup_seed(secret)
 
     # If doing backup, ask the user to confirm.
     if perform_backup:
@@ -254,14 +253,3 @@ async def backup_seed(
         await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
 
 
-async def sd_card_backup_seed(
-    ctx: Context, mnemonic_secret: bytes
-) -> None:
-    from storage.sd_seed_backup import set_sd_seed_backup
-    from apps.common.sdcard import ensure_sdcard
-
-    # Ensure sd card
-    await ensure_sdcard(ctx)
-
-    # Write seed backup
-    set_sd_seed_backup(mnemonic_secret)
