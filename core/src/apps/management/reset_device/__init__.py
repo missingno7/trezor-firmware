@@ -102,22 +102,25 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     perform_backup = not msg.no_backup and not msg.skip_backup
     sd_backup_present = is_sdbackup_present()
 
-    # Do the SD card backup
-    if sd_backup_present:
-        perform_sd_backup = await confirm_sd_backup(ctx)
-        if perform_sd_backup:
-            await sd_card_backup_seed(ctx, secret)
-
-            # Verify that backup was successful
-            verify_sd_backup_seed(secret)
-
     # If doing backup, ask the user to confirm.
     if perform_backup:
         perform_backup = await confirm_backup(ctx)
 
     # generate and display backup information for the master secret
     if perform_backup:
-        await backup_seed(ctx, backup_type, secret)
+        sd_backup_done = False
+        # Do the SD card backup
+        if sd_backup_present and backup_type == BAK_T_BIP39:
+            perform_sd_backup = await confirm_sd_backup(ctx)
+            if perform_sd_backup:
+                await sd_card_backup_seed(ctx, secret)
+
+                # Verify that backup was successful
+                verify_sd_backup_seed(secret)
+                sd_backup_done=True
+
+        if not sd_backup_done:
+            await backup_seed(ctx, backup_type, secret)
 
     # write settings and master secret into storage
     if msg.label is not None:
