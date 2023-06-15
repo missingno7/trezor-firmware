@@ -44,6 +44,7 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor.crypto import bip39, random
     from trezor.messages import Success, EntropyAck, EntropyRequest
     from trezor.pin import render_empty_loader
+    from storage.sd_seed_backup import load_sd_seed_backup
 
     backup_type = msg.backup_type  # local_cache_attribute
 
@@ -102,9 +103,14 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
 
 
     perform_sd_backup = await confirm_sd_backup(ctx)
-    print(f"SD BACKUP: {perform_sd_backup}")
     if perform_sd_backup:
-        await sd_card_backup_seed(ctx, backup_type, secret)
+        await sd_card_backup_seed(ctx, secret)
+
+        # Ensure correct mnemonic can be loaded
+        restored_secret = load_sd_seed_backup()
+        if secret != restored_secret:
+            raise ProcessError("SD retrieved seed differs from stored seed")
+
 
     # If doing backup, ask the user to confirm.
     if perform_backup:
@@ -248,27 +254,13 @@ async def backup_seed(
 
 
 async def sd_card_backup_seed(
-    ctx: Context, backup_type: BackupType, mnemonic_secret: bytes
+    ctx: Context, mnemonic_secret: bytes
 ) -> None:
-    from storage.sd_seed_backup import set_sd_seed_backup, load_sd_seed_backup
+    from storage.sd_seed_backup import set_sd_seed_backup
     from apps.common.sdcard import ensure_sdcard
 
-    if backup_type == BAK_T_SLIP39_BASIC:
-        raise ValueError('BAK_T_SLIP39_BASIC not supported for SD backup')
-    elif backup_type == BAK_T_SLIP39_ADVANCED:
-        raise ValueError('BAK_T_SLIP39_ADVANCED not supported for SD backup')
-    else:
-        print("Perform  ing SD backup")
-        await ensure_sdcard(ctx)
+    # Ensure sd card
+    await ensure_sdcard(ctx)
 
-        # Write seed backup
-        set_sd_seed_backup(mnemonic_secret)
-
-        # Load seed backup
-        restored_mnemonic_secret = load_sd_seed_backup().decode('utf-8').rstrip('\x00').encode()
-
-        print(f"Seed backup ({len(restored_mnemonic_secret)}) {restored_mnemonic_secret}")
-        print(f"Seed backup ({len(mnemonic_secret)}) {mnemonic_secret}")
-        print(restored_mnemonic_secret == mnemonic_secret)
-
-
+    # Write seed backup
+    set_sd_seed_backup(mnemonic_secret)

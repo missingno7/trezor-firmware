@@ -25,81 +25,81 @@ def _get_device_dir() -> str:
     return f"/trezor/device_{storage.device.get_device_id().lower()}"
 
 
-def _get_salt_path(new: bool = False) -> str:
+def _get_backup_path(new: bool = False) -> str:
     ext = ".new" if new else ""
     return f"{_get_device_dir()}/backup{ext}"
 
 
 @with_filesystem
-def _load_salt(path: str) -> bytearray | None:
-    # Load the salt file if it exists.
+def _load_backup(path: str) -> bytes | None:
+    # Load the mnemonic secret backup file if it exists.
     try:
         with fatfs.open(path, "r") as f:
-            salt = bytearray(SD_SALT_LEN_BYTES)
-            f.read(salt)
+            mnemonic_secret_backup = bytearray(SD_SALT_LEN_BYTES)
+            f.read(mnemonic_secret_backup)
 
     except fatfs.FatFSError:
         return None
 
 
-    return salt
+    return mnemonic_secret_backup.decode('utf-8').rstrip('\x00').encode()
 
 
 @with_filesystem
-def load_sd_seed_backup() -> bytearray | None:
+def load_sd_seed_backup() -> bytes | None:
 
-    salt_path = _get_salt_path()
-    new_salt_path = _get_salt_path(new=True)
+    backup_path = _get_backup_path()
+    new_backup_path = _get_backup_path(new=True)
 
-    salt = _load_salt(salt_path)
-    if salt is not None:
-        return salt
+    mnemonic_secret_backup = _load_backup(backup_path)
+    if mnemonic_secret_backup is not None:
+        return mnemonic_secret_backup
 
-    # Check if there is a new salt.
-    salt = _load_salt(new_salt_path)
-    if salt is None:
-        # No valid salt file on this SD card.
+    # Check if there is a new mnemonic.
+    mnemonic_secret_backup = _load_backup(new_backup_path)
+    if mnemonic_secret_backup is None:
+        # No valid mnemonic file on this SD card.
         raise WrongSdCard
 
-    # Normal salt file does not exist, but new salt file exists. That means that
-    # SD salt regeneration was interrupted earlier. Bring into consistent state.
-    # TODO Possibly overwrite salt file with random data.
+    # Normal mnemonic file does not exist, but new mnemonic file exists. That means that
+    # SD mnemonic regeneration was interrupted earlier. Bring into consistent state.
+    # TODO Possibly overwrite mnemonic file with random data.
     try:
-        fatfs.unlink(salt_path)
+        fatfs.unlink(backup_path)
     except fatfs.FatFSError:
         pass
 
     # fatfs.rename can fail with a write error, which falls through as an FatFSError.
     # This should be handled in calling code, by allowing the user to retry.
-    fatfs.rename(new_salt_path, salt_path)
-    return salt
+    fatfs.rename(new_backup_path, backup_path)
+    return mnemonic_secret_backup
 
 
 @with_filesystem
-def set_sd_seed_backup(salt: bytes, stage: bool = False) -> None:
-    salt_path = _get_salt_path(stage)
+def set_sd_seed_backup(mnemonic_secret: bytes, stage: bool = False) -> None:
+    backup_path = _get_backup_path(stage)
     fatfs.mkdir("/trezor", True)
     fatfs.mkdir(_get_device_dir(), True)
 
 
-    with fatfs.open(salt_path, "w") as f:
-        f.write(salt)
+    with fatfs.open(backup_path, "w") as f:
+        f.write(mnemonic_secret)
 
 
 @with_filesystem
 def commit_sd_seed_backup() -> None:
-    salt_path = _get_salt_path(new=False)
-    new_salt_path = _get_salt_path(new=True)
+    backup_path = _get_backup_path(new=False)
+    new_backup_path = _get_backup_path(new=True)
 
     try:
-        fatfs.unlink(salt_path)
+        fatfs.unlink(backup_path)
     except fatfs.FatFSError:
         pass
-    fatfs.rename(new_salt_path, salt_path)
+    fatfs.rename(new_backup_path, backup_path)
 
 
 @with_filesystem
 def remove_sd_seed_backup() -> None:
-    salt_path = _get_salt_path()
-    # TODO Possibly overwrite salt file with random data.
-    fatfs.unlink(salt_path)
+    backup_path = _get_backup_path()
+    # TODO Possibly overwrite mnemonic file with random data.
+    fatfs.unlink(backup_path)
