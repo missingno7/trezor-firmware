@@ -21,13 +21,9 @@ class WrongSdCard(Exception):
     pass
 
 
-def _get_device_dir() -> str:
-    return f"/trezor/device_{storage.device.get_device_id().lower()}"
-
-
 def _get_backup_path(new: bool = False) -> str:
     ext = ".new" if new else ""
-    return f"{_get_device_dir()}/backup{ext}"
+    return f"/trezor/backup{ext}"
 
 
 @with_filesystem
@@ -47,13 +43,13 @@ def _load_backup(path: str) -> bytes | None:
 
 @with_filesystem
 def load_sd_seed_backup() -> bytes | None:
-
     backup_path = _get_backup_path()
-    new_backup_path = _get_backup_path(new=True)
 
     mnemonic_secret_backup = _load_backup(backup_path)
     if mnemonic_secret_backup is not None:
         return mnemonic_secret_backup
+
+    new_backup_path = _get_backup_path(new=True)
 
     # Check if there is a new mnemonic.
     mnemonic_secret_backup = _load_backup(new_backup_path)
@@ -79,12 +75,9 @@ def load_sd_seed_backup() -> bytes | None:
 def set_sd_seed_backup(mnemonic_secret: bytes, stage: bool = False) -> None:
     backup_path = _get_backup_path(stage)
     fatfs.mkdir("/trezor", True)
-    fatfs.mkdir(_get_device_dir(), True)
-
 
     with fatfs.open(backup_path, "w") as f:
         f.write(mnemonic_secret)
-
 
 @with_filesystem
 def commit_sd_seed_backup() -> None:

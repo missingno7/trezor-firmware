@@ -35,7 +35,7 @@ async def confirm_sd_backup(ctx: Context):
 
 
 async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
-    from trezor import config
+    from trezor import config, sdcard
     from apps.common.request_pin import request_pin_confirm
     from trezor.ui.layouts import (
         confirm_backup,
@@ -100,16 +100,17 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     # If either of skip_backup or no_backup is specified, we are not doing backup now.
     # Otherwise, we try to do it.
     perform_backup = not msg.no_backup and not msg.skip_backup
+    is_sd_present = sdcard.is_present()
 
+    if is_sd_present:
+        perform_sd_backup = await confirm_sd_backup(ctx)
+        if perform_sd_backup:
+            await sd_card_backup_seed(ctx, secret)
 
-    perform_sd_backup = await confirm_sd_backup(ctx)
-    if perform_sd_backup:
-        await sd_card_backup_seed(ctx, secret)
-
-        # Ensure correct mnemonic can be loaded
-        restored_secret = load_sd_seed_backup()
-        if secret != restored_secret:
-            raise ProcessError("SD retrieved seed differs from stored seed")
+            # Ensure correct mnemonic can be loaded
+            restored_secret = load_sd_seed_backup()
+            if secret != restored_secret:
+                raise ProcessError("SD retrieved seed differs from stored seed")
 
 
     # If doing backup, ask the user to confirm.
