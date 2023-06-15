@@ -23,6 +23,17 @@ BAK_T_SLIP39_ADVANCED = BackupType.Slip39_Advanced  # global_import_cache
 _DEFAULT_BACKUP_TYPE = BAK_T_BIP39
 
 
+async def confirm_sd_backup(ctx: Context):
+    from trezor.ui.layouts import confirm_action
+
+    try:
+        await confirm_action(ctx, "SD backup", "SD card backup (optional)", "Would you like to perform the SD card backup?")
+    except Exception:
+        return False
+
+    return True
+
+
 async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor import config
     from apps.common.request_pin import request_pin_confirm
@@ -88,6 +99,12 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     # If either of skip_backup or no_backup is specified, we are not doing backup now.
     # Otherwise, we try to do it.
     perform_backup = not msg.no_backup and not msg.skip_backup
+
+
+    perform_sd_backup = await confirm_sd_backup(ctx)
+    print(f"SD BACKUP: {perform_sd_backup}")
+    if perform_sd_backup:
+        await sd_card_backup_seed(ctx, backup_type, secret)
 
     # If doing backup, ask the user to confirm.
     if perform_backup:
@@ -228,3 +245,30 @@ async def backup_seed(
         await _backup_slip39_advanced(ctx, mnemonic_secret)
     else:
         await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
+
+
+async def sd_card_backup_seed(
+    ctx: Context, backup_type: BackupType, mnemonic_secret: bytes
+) -> None:
+    from storage.sd_seed_backup import set_sd_seed_backup, load_sd_seed_backup
+    from apps.common.sdcard import ensure_sdcard
+
+    if backup_type == BAK_T_SLIP39_BASIC:
+        raise ValueError('BAK_T_SLIP39_BASIC not supported for SD backup')
+    elif backup_type == BAK_T_SLIP39_ADVANCED:
+        raise ValueError('BAK_T_SLIP39_ADVANCED not supported for SD backup')
+    else:
+        print("Perform  ing SD backup")
+        await ensure_sdcard(ctx)
+
+        # Write seed backup
+        set_sd_seed_backup(mnemonic_secret)
+
+        # Load seed backup
+        restored_mnemonic_secret = load_sd_seed_backup().decode('utf-8').rstrip('\x00').encode()
+
+        print(f"Seed backup ({len(restored_mnemonic_secret)}) {restored_mnemonic_secret}")
+        print(f"Seed backup ({len(mnemonic_secret)}) {mnemonic_secret}")
+        print(restored_mnemonic_secret == mnemonic_secret)
+
+
