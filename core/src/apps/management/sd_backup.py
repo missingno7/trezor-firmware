@@ -5,7 +5,6 @@ def is_sdbackup_present():
     return sdcard.is_present()
 
 
-
 async def sd_card_backup_seed(
     ctx: Context, mnemonic_secret: bytes
 ) -> None:
@@ -17,7 +16,6 @@ async def sd_card_backup_seed(
 
     # Write seed backup
     set_sd_seed_backup(mnemonic_secret)
-
 
 
 def ensure_sd_card_backup_seed(mnemonic_secret: bytes) -> None:
