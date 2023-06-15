@@ -10,9 +10,7 @@ if TYPE_CHECKING:
 # If set, `enforce_wordlist` must be True, because we do not support non-enforcing.
 DRY_RUN_ALLOWED_FIELDS = ("dry_run", "word_count", "enforce_wordlist", "type")
 
-def is_sdbackup_present():
-    from trezor import sdcard
-    return sdcard.is_present()
+
 
 async def confirm_sd_recovery(ctx: Context):
     from trezor.ui.layouts import confirm_action
@@ -44,7 +42,7 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
         request_pin_confirm,
     )
     from .homescreen import recovery_homescreen, recovery_process
-    from trezor import sdcard
+    from apps.management.sd_backup import is_sdbackup_present
 
     sd_backup_present = is_sdbackup_present()
     dry_run = msg.dry_run  # local_cache_attribute
@@ -72,7 +70,6 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
 
     # --------------------------------------------------------
     # _continue_dialog
-
     if not dry_run:
         if sd_backup_present:
             sd_restore = await confirm_sd_recovery(ctx)

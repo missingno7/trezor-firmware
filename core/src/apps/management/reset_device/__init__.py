@@ -34,7 +34,6 @@ async def confirm_sd_backup(ctx: Context):
     return True
 
 
-
 async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor import config
     from apps.common.request_pin import request_pin_confirm
