@@ -250,5 +250,3 @@ async def backup_seed(
         await _backup_slip39_advanced(ctx, mnemonic_secret)
     else:
         await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
-
-
