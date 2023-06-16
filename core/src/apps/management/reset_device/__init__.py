@@ -23,6 +23,17 @@ BAK_T_SLIP39_ADVANCED = BackupType.Slip39_Advanced  # global_import_cache
 _DEFAULT_BACKUP_TYPE = BAK_T_BIP39
 
 
+async def confirm_sd_backup(ctx: Context):
+    from trezor.ui.layouts import confirm_action
+
+    try:
+        await confirm_action(ctx, "SD backup", "SD card backup (optional)", "Would you like to perform the SD card backup?", verb="SD CARD", verb_cancel="PAPER")
+    except Exception:
+        return False
+
+    return True
+
+
 async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor import config
     from apps.common.request_pin import request_pin_confirm
@@ -227,4 +238,31 @@ async def backup_seed(
     elif backup_type == BAK_T_SLIP39_ADVANCED:
         await _backup_slip39_advanced(ctx, mnemonic_secret)
     else:
-        await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
+        # Do the optional SD card backup
+        sd_backup_done = await sd_backup_seed(ctx, mnemonic_secret)
+
+        # Do the manual backup if SD card backup was not done
+        if not sd_backup_done:
+            await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
+
+
+async def sd_backup_seed(
+    ctx: Context, mnemonic_secret: bytes
+) -> bool:
+    from apps.management.sd_backup import sd_card_backup_seed, verify_sd_backup_seed
+
+    sd_backup_done = False
+
+    # Ask user if SD backup should be performed
+    perform_sd_backup = await confirm_sd_backup(ctx)
+    if perform_sd_backup:
+        await sd_card_backup_seed(ctx, mnemonic_secret)
+
+        # Verify that SD backup was successful
+        verified = verify_sd_backup_seed(mnemonic_secret)
+        if not verified:
+            raise ProcessError("SD retrieved seed differs from stored seed")
+
+        sd_backup_done = True
+
+    return sd_backup_done

@@ -11,6 +11,17 @@ if TYPE_CHECKING:
 DRY_RUN_ALLOWED_FIELDS = ("dry_run", "word_count", "enforce_wordlist", "type")
 
 
+async def confirm_sd_recovery(ctx: Context) -> bool:
+    from trezor.ui.layouts import confirm_action
+
+    try:
+        await confirm_action(ctx, "SD recovery", "SD card recovery", "Would you like to recover from SD card?")
+    except Exception:
+        return False
+
+    return True
+
+
 async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
     """
     Recover BIP39/SLIP39 seed into empty device.
@@ -21,17 +32,22 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
     import storage
     import storage.device as storage_device
     import storage.recovery as storage_recovery
+    from storage.sd_seed_backup import load_sd_seed_backup
     from trezor import config, wire, workflow
-    from trezor.enums import ButtonRequestType
-    from trezor.ui.layouts import confirm_action, confirm_reset_device
+    from trezor.enums import ButtonRequestType, BackupType
+    from trezor.ui.layouts import confirm_action, confirm_reset_device, show_success
     from apps.common.request_pin import (
         error_pin_invalid,
         request_pin_and_sd_salt,
         request_pin_confirm,
     )
     from .homescreen import recovery_homescreen, recovery_process
+    from trezor.messages import Success
+    from apps.common.sdcard import is_sdbackup_present
 
+    sd_backup_present = is_sdbackup_present()
     dry_run = msg.dry_run  # local_cache_attribute
+    restored_from_sd = False
 
     # --------------------------------------------------------
     # validate
@@ -58,6 +74,18 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
     # _continue_dialog
     if not dry_run:
         await confirm_reset_device(ctx, "Wallet recovery", recovery=True)
+
+        if sd_backup_present:
+            sd_restore = await confirm_sd_recovery(ctx)
+            if sd_restore:
+                restored_secret = load_sd_seed_backup()
+                storage_device.store_mnemonic_secret(
+                    restored_secret,
+                    BackupType.Bip39,
+                    needs_backup=False,
+                    no_backup=False,
+                )
+                restored_from_sd = True
     else:
         await confirm_action(
             ctx,
@@ -91,8 +119,17 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
         if msg.label is not None:
             storage_device.set_label(msg.label)
 
-    storage_recovery.set_in_progress(True)
-    storage_recovery.set_dry_run(bool(dry_run))
 
-    workflow.set_default(recovery_homescreen)
-    return await recovery_process(ctx)
+
+    if restored_from_sd:
+        await show_success(
+            ctx, "success_recovery", "You have finished recovering your wallet."
+        )
+        return Success(message="Device recovered")
+    else:
+        storage_recovery.set_in_progress(True)
+        storage_recovery.set_dry_run(bool(dry_run))
+
+        workflow.set_default(recovery_homescreen)
+
+        return await recovery_process(ctx)
