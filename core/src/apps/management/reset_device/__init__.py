@@ -27,7 +27,7 @@ async def confirm_sd_backup(ctx: Context):
     from trezor.ui.layouts import confirm_action
 
     try:
-        await confirm_action(ctx, "SD backup", "SD card backup (optional)", "Would you like to perform the SD card backup?")
+        await confirm_action(ctx, "SD backup", "SD card backup (optional)", "Would you like to perform the SD card backup?", verb="SD CARD", verb_cancel="PAPER")
     except Exception:
         return False
 
@@ -249,23 +249,20 @@ async def backup_seed(
 async def sd_backup_seed(
     ctx: Context, mnemonic_secret: bytes
 ) -> bool:
-    from apps.management.sd_backup import sd_card_backup_seed, is_sdbackup_present, verify_sd_backup_seed
+    from apps.management.sd_backup import sd_card_backup_seed, verify_sd_backup_seed
 
-    sd_backup_present = is_sdbackup_present()
     sd_backup_done = False
 
-    # Skip SD backup if SD card not present
-    if sd_backup_present:
-        # Ask user if SD backup should be performed
-        perform_sd_backup = await confirm_sd_backup(ctx)
-        if perform_sd_backup:
-            await sd_card_backup_seed(ctx, mnemonic_secret)
+    # Ask user if SD backup should be performed
+    perform_sd_backup = await confirm_sd_backup(ctx)
+    if perform_sd_backup:
+        await sd_card_backup_seed(ctx, mnemonic_secret)
 
-            # Verify that SD backup was successful
-            verified = verify_sd_backup_seed(mnemonic_secret)
-            if not verified:
-                raise ProcessError("SD retrieved seed differs from stored seed")
+        # Verify that SD backup was successful
+        verified = verify_sd_backup_seed(mnemonic_secret)
+        if not verified:
+            raise ProcessError("SD retrieved seed differs from stored seed")
 
-            sd_backup_done = True
+        sd_backup_done = True
 
     return sd_backup_done

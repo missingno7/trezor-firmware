@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 DRY_RUN_ALLOWED_FIELDS = ("dry_run", "word_count", "enforce_wordlist", "type")
 
 
-async def confirm_sd_recovery(ctx: Context):
+async def confirm_sd_recovery(ctx: Context) -> bool:
     from trezor.ui.layouts import confirm_action
 
     try:
@@ -42,10 +42,12 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
         request_pin_confirm,
     )
     from .homescreen import recovery_homescreen, recovery_process
-    from apps.management.sd_backup import is_sdbackup_present
+    from trezor.messages import Success
+    from apps.common.sdcard import is_sdbackup_present
 
     sd_backup_present = is_sdbackup_present()
     dry_run = msg.dry_run  # local_cache_attribute
+    restored_from_sd = False
 
     # --------------------------------------------------------
     # validate
@@ -71,6 +73,8 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
     # --------------------------------------------------------
     # _continue_dialog
     if not dry_run:
+        await confirm_reset_device(ctx, "Wallet recovery", recovery=True)
+
         if sd_backup_present:
             sd_restore = await confirm_sd_recovery(ctx)
             if sd_restore:
@@ -81,13 +85,7 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
                     needs_backup=False,
                     no_backup=False,
                 )
-
-                await show_success(
-                    ctx, "success_recovery", "You have finished recovering your wallet."
-                )
-                return Success(message="Device recovered")
-
-        await confirm_reset_device(ctx, "Wallet recovery", recovery=True)
+                restored_from_sd = True
     else:
         await confirm_action(
             ctx,
@@ -121,8 +119,17 @@ async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
         if msg.label is not None:
             storage_device.set_label(msg.label)
 
-    storage_recovery.set_in_progress(True)
-    storage_recovery.set_dry_run(bool(dry_run))
 
-    workflow.set_default(recovery_homescreen)
-    return await recovery_process(ctx)
+
+    if restored_from_sd:
+        await show_success(
+            ctx, "success_recovery", "You have finished recovering your wallet."
+        )
+        return Success(message="Device recovered")
+    else:
+        storage_recovery.set_in_progress(True)
+        storage_recovery.set_dry_run(bool(dry_run))
+
+        workflow.set_default(recovery_homescreen)
+
+        return await recovery_process(ctx)

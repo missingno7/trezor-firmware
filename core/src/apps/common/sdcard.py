@@ -141,8 +141,12 @@ async def ensure_sdcard(
             # formatting failed, or generic I/O error (SD card power-on failed)
             await confirm_retry_sd(ctx)
 
+def is_sdbackup_present():
+    from trezor import sdcard
+    return sdcard.is_present()
 
-async def ensure_backup_sd_card(
+
+async def ensure_sd_backup(
     ctx: wire.GenericContext, ensure_filesystem: bool = True
 ) -> None:
     """Ensure a SD card is ready for use.
@@ -156,7 +160,7 @@ async def ensure_backup_sd_card(
     """
     from trezor import sdcard, io
 
-    while not sdcard.is_present():
+    while not is_sdbackup_present():
         await _confirm_retry_insert_card(ctx)
 
     if not ensure_filesystem:

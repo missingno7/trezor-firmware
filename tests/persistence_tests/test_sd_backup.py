@@ -21,6 +21,7 @@ from ..device_handler import BackgroundDeviceHandler
 from ..emulators import Emulator
 from ..upgrade_tests import core_only
 
+
 @core_only
 def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     device_handler = BackgroundDeviceHandler(core_emulator.client)
@@ -69,7 +70,10 @@ def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     device_handler.run(device.recover, pin_protection=False)
 
     debug = device_handler.debuglink()
-    assert debug.wait_layout().title() == "SD CARD RECOVERY"
+    assert debug.wait_layout().title() == "WALLET RECOVERY"
+
+    layout = debug.click(buttons.OK, wait=True)
+    assert layout.title() == "SD CARD RECOVERY"
 
     layout = debug.click(buttons.OK, wait=True)
     assert layout.text_content() == "You have finished recovering your wallet."
@@ -77,3 +81,4 @@ def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     layout = debug.click(buttons.OK, wait=True)
     assert layout.main_component() == "Homescreen"
 
+    assert "Device recovered" in device_handler.result().message
