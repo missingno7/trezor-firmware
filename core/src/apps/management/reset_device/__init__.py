@@ -262,7 +262,10 @@ async def sd_backup_seed(
             await sd_card_backup_seed(ctx, mnemonic_secret)
 
             # Verify that SD backup was successful
-            verify_sd_backup_seed(mnemonic_secret)
+            verified = verify_sd_backup_seed(mnemonic_secret)
+            if not verified:
+                raise ProcessError("SD retrieved seed differs from stored seed")
+
             sd_backup_done = True
 
     return sd_backup_done

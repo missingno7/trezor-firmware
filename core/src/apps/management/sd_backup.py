@@ -20,11 +20,10 @@ async def sd_card_backup_seed(
     set_sd_seed_backup(mnemonic_secret)
 
 
-def verify_sd_backup_seed(mnemonic_secret: bytes) -> None:
+def verify_sd_backup_seed(mnemonic_secret: bytes) -> bool:
     from storage.sd_seed_backup import load_sd_seed_backup
 
     # Ensure correct mnemonic can be loaded
     restored_secret = load_sd_seed_backup()
-    if mnemonic_secret != restored_secret:
-        raise ProcessError("SD retrieved seed differs from stored seed")
+    return mnemonic_secret == restored_secret
 
