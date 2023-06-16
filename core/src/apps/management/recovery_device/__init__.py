@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 DRY_RUN_ALLOWED_FIELDS = ("dry_run", "word_count", "enforce_wordlist", "type")
 
 
-
 async def confirm_sd_recovery(ctx: Context):
     from trezor.ui.layouts import confirm_action
 
@@ -21,6 +20,7 @@ async def confirm_sd_recovery(ctx: Context):
         return False
 
     return True
+
 
 async def recovery_device(ctx: Context, msg: RecoveryDevice) -> Success:
     """

@@ -142,7 +142,6 @@ async def ensure_sdcard(
             await confirm_retry_sd(ctx)
 
 
-
 async def ensure_backup_sd_card(
     ctx: wire.GenericContext, ensure_filesystem: bool = True
 ) -> None:
@@ -187,7 +186,6 @@ async def ensure_backup_sd_card(
         except OSError:
             # formatting failed, or generic I/O error (SD card power-on failed)
             await confirm_retry_sd(ctx)
-
 
 
 async def request_sd_salt(
