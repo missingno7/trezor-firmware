@@ -19,9 +19,10 @@ async def ensure_backup_sd_card(
     mounted.
     """
     from trezor import sdcard, io
+    from apps.common.sdcard import confirm_retry_insert_card, confirm_retry_sd
 
     while not sdcard.is_present():
-        await _confirm_retry_insert_card(ctx)
+        await confirm_retry_insert_card(ctx)
 
     if not ensure_filesystem:
         return
@@ -54,7 +55,7 @@ async def ensure_backup_sd_card(
 
 
 async def sd_card_backup_seed(
-    ctx: Context, mnemonic_secret: bytes
+    ctx: wire.Context, mnemonic_secret: bytes
 ) -> None:
     from storage.sd_seed_backup import set_sd_seed_backup
 

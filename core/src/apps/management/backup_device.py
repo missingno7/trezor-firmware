@@ -14,6 +14,8 @@ async def backup_device(ctx: Context, msg: BackupDevice) -> Success:
 
     from .reset_device import backup_seed, layout
 
+
+
     if not storage_device.is_initialized():
         raise wire.NotInitialized("Device is not initialized")
     if not storage_device.needs_backup():

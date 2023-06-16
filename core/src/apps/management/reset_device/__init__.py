@@ -44,7 +44,7 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor.crypto import bip39, random
     from trezor.messages import Success, EntropyAck, EntropyRequest
     from trezor.pin import render_empty_loader
-    from apps.management.sd_backup import sd_card_backup_seed, is_sdbackup_present, verify_sd_backup_seed
+
 
     backup_type = msg.backup_type  # local_cache_attribute
 
@@ -100,7 +100,6 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     # If either of skip_backup or no_backup is specified, we are not doing backup now.
     # Otherwise, we try to do it.
     perform_backup = not msg.no_backup and not msg.skip_backup
-    sd_backup_present = is_sdbackup_present()
 
     # If doing backup, ask the user to confirm.
     if perform_backup:
@@ -108,19 +107,7 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
 
     # generate and display backup information for the master secret
     if perform_backup:
-        sd_backup_done = False
-        # Do the SD card backup
-        if sd_backup_present and backup_type == BAK_T_BIP39:
-            perform_sd_backup = await confirm_sd_backup(ctx)
-            if perform_sd_backup:
-                await sd_card_backup_seed(ctx, secret)
-
-                # Verify that backup was successful
-                verify_sd_backup_seed(secret)
-                sd_backup_done=True
-
-        if not sd_backup_done:
-            await backup_seed(ctx, backup_type, secret)
+        await backup_seed(ctx, backup_type, secret)
 
     # write settings and master secret into storage
     if msg.label is not None:
@@ -247,9 +234,37 @@ def _compute_secret_from_entropy(
 async def backup_seed(
     ctx: Context, backup_type: BackupType, mnemonic_secret: bytes
 ) -> None:
+
     if backup_type == BAK_T_SLIP39_BASIC:
         await _backup_slip39_basic(ctx, mnemonic_secret)
     elif backup_type == BAK_T_SLIP39_ADVANCED:
         await _backup_slip39_advanced(ctx, mnemonic_secret)
     else:
-        await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
+        # Do the optional SD card backup
+        sd_backup_done = await sd_backup_seed(ctx, mnemonic_secret)
+
+        # Do the manual backup if SD card backup was not done
+        if not sd_backup_done:
+            await layout.bip39_show_and_confirm_mnemonic(ctx, mnemonic_secret.decode())
+
+
+async def sd_backup_seed(
+    ctx: Context, mnemonic_secret: bytes
+) -> bool:
+    from apps.management.sd_backup import sd_card_backup_seed, is_sdbackup_present, verify_sd_backup_seed
+
+    sd_backup_present = is_sdbackup_present()
+    sd_backup_done = False
+
+    # Skip SD backup if SD card not present
+    if sd_backup_present:
+        # Ask user if SD backup should be performed
+        perform_sd_backup = await confirm_sd_backup(ctx)
+        if perform_sd_backup:
+            await sd_card_backup_seed(ctx, mnemonic_secret)
+
+            # Verify that SD backup was successful
+            verify_sd_backup_seed(mnemonic_secret)
+            sd_backup_done = True
+
+    return sd_backup_done

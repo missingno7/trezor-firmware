@@ -29,7 +29,7 @@ async def _confirm_retry_wrong_card(ctx: wire.GenericContext) -> None:
         )
 
 
-async def _confirm_retry_insert_card(ctx: wire.GenericContext) -> None:
+async def confirm_retry_insert_card(ctx: wire.GenericContext) -> None:
     if SD_CARD_HOT_SWAPPABLE:
         await confirm_action(
             ctx,
@@ -109,7 +109,7 @@ async def ensure_sdcard(
     from trezor import sdcard
 
     while not sdcard.is_present():
-        await _confirm_retry_insert_card(ctx)
+        await confirm_retry_insert_card(ctx)
 
     if not ensure_filesystem:
         return
