@@ -6,60 +6,14 @@ def is_sdbackup_present():
     return sdcard.is_present()
 
 
-async def ensure_backup_sd_card(
-    ctx: wire.GenericContext, ensure_filesystem: bool = True
-) -> None:
-    """Ensure a SD card is ready for use.
-
-    This function runs the UI flow needed to ask the user to insert a SD card if there
-    isn't one.
-
-    If `ensure_filesystem` is True (the default), it also tries to mount the SD card
-    filesystem, and allows the user to format the card if a filesystem cannot be
-    mounted.
-    """
-    from trezor import sdcard, io
-    from apps.common.sdcard import confirm_retry_insert_card, confirm_retry_sd
-
-    while not sdcard.is_present():
-        await confirm_retry_insert_card(ctx)
-
-    if not ensure_filesystem:
-        return
-    fatfs = io.fatfs  # local_cache_attribute
-    while True:
-        try:
-            try:
-                with sdcard.filesystem(mounted=False):
-                    fatfs.mount()
-            except fatfs.NoFilesystem:
-                # card not formatted. proceed out of the except clause
-                pass
-            else:
-                # no error when mounting
-                return
-
-            # Proceed to formatting. Failure is caught by the outside OSError handler
-            with sdcard.filesystem(mounted=False):
-                fatfs.mkfs()
-                fatfs.mount()
-                fatfs.setlabel("TREZOR")
-
-            # format and mount succeeded
-            return
-
-        except OSError:
-            # formatting failed, or generic I/O error (SD card power-on failed)
-            await confirm_retry_sd(ctx)
-
-
 
 async def sd_card_backup_seed(
     ctx: wire.Context, mnemonic_secret: bytes
 ) -> None:
     from storage.sd_seed_backup import set_sd_seed_backup
+    from apps.common.sdcard import ensure_backup_sd_card
 
-    # Ensure sd card
+    # Ensure sd card for backup
     await ensure_backup_sd_card(ctx)
 
     # Write seed backup
