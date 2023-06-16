@@ -45,7 +45,6 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor.messages import Success, EntropyAck, EntropyRequest
     from trezor.pin import render_empty_loader
 
-
     backup_type = msg.backup_type  # local_cache_attribute
 
     # validate parameters and device state
@@ -234,7 +233,6 @@ def _compute_secret_from_entropy(
 async def backup_seed(
     ctx: Context, backup_type: BackupType, mnemonic_secret: bytes
 ) -> None:
-
     if backup_type == BAK_T_SLIP39_BASIC:
         await _backup_slip39_basic(ctx, mnemonic_secret)
     elif backup_type == BAK_T_SLIP39_ADVANCED:
