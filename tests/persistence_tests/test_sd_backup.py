@@ -20,17 +20,17 @@ from .. import buttons
 from ..device_handler import BackgroundDeviceHandler
 from ..emulators import Emulator
 from ..upgrade_tests import core_only
-from ..click_tests import reset, recovery
 
 @core_only
 def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     device_handler = BackgroundDeviceHandler(core_emulator.client)
     debug = device_handler.debuglink()
 
-    # Create wallet and do the SD card backup
+    # Confirm device state
     features = device_handler.features()
     assert features.initialized is False
 
+    # Create wallet and do the SD card backup
     device_handler.run(device.reset, pin_protection=False)
     assert debug.wait_layout().title() == "WALLET CREATION"
 
@@ -47,11 +47,9 @@ def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     assert layout.main_component() == "Homescreen"
 
     # Confirm device state
-    device_handler.restart(core_emulator)
-
+    assert device_handler.result() == "Initialized"
     features = device_handler.features()
     assert features.initialized is True
-    assert features.recovery_mode is False
 
     # Wipe the device
     device_handler.run(device.wipe)
@@ -63,8 +61,7 @@ def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     assert layout.main_component() == "Homescreen"
 
     # Confirm device state
-    device_handler.restart(core_emulator)
-
+    assert device_handler.result() == "Device wiped"
     features = device_handler.features()
     assert features.initialized is False
 
@@ -77,5 +74,6 @@ def test_sd_card_backup_and_recovery(core_emulator: Emulator):
     layout = debug.click(buttons.OK, wait=True)
     assert layout.text_content() == "You have finished recovering your wallet."
 
-    recovery.finalize(debug)
+    layout = debug.click(buttons.OK, wait=True)
+    assert layout.main_component() == "Homescreen"
 
